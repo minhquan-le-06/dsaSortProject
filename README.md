@@ -66,9 +66,16 @@ Sau tối ưu, thời gian thực thi giảm từ 78ms xuống còn khoảng 62m
 
 ## B1. Benchmark 1
 
----
+Thuật toán sử dụng trong phiên bản đầu tiên là Multi-key Quicksort (Quicksort phân hoạch 3 hướng) kết hợp với thuật toán Insertion Sort khi kích thước của mảng con giảm xuống dưới 20 phần tử.
 
-## B2. Sinh test case
+#### Các đặc điểm chính (Phiên bản 1)
+
+- Sử dụng cấu trúc `std::vector<string>` để lưu trữ mảng dữ liệu và thao tác trực tiếp bằng đối tượng chuỗi mặc định của C++.
+- Phân hoạch (Partition) mảng đệ quy thành 3 phần ranh giới: phần nhỏ hơn, phần bằng và phần lớn hơn ký tự chốt `v` đang được xét tại độ sâu `d`.
+- Sử dụng hàm bổ trợ `charAt` để trích xuất ký tự tại vị trí an toàn, trả về giá trị -1 nếu chỉ số độ sâu vượt quá chiều dài hiện tại của chuỗi.
+- Thao tác hoán đổi chuỗi được thực hiện qua hàm tự định nghĩa `swapStr` sử dụng biến tạm chuỗi, gây ra nhiều chi phí ẩn về cấp phát bộ nhớ.
+- Nhập xuất dữ liệu chuẩn qua `cin` và `cout` kết hợp với lệnh tắt đồng bộ luồng `ios::sync_with_stdio(false)` và `cin.tie(nullptr)`.
+- Phiên bản này chạy mất 250ms do bị nghẽn ở overhead của thư viện iostream (dù đã tắt đồng bộ) và chi phí liên tục khi khởi tạo, sao chép vùng nhớ của lớp `std::string`.
 
 ## B2. Sinh test case
 
@@ -86,8 +93,21 @@ Dữ liệu chuỗi ($10 \le L \le 100$) mở ra lỗ hổng lớn về chi phí
 4. **`test004.in` (Đồng nhất tuyệt đối):** $10^5$ chuỗi chứa toàn ký tự `"z"`. Dồn tất cả dữ liệu vào 1 xô duy nhất, vô hiệu hóa hoàn toàn thuật toán chia bucket của Nhóm 4.
 5. **`test005.in` (Lệch nhịp Cache):** Đan xen chuỗi dài 100 và chuỗi ngắn 10 chung tiền tố `"aa"`. Gây nhiễu bộ đệm CPU khi con trỏ nhảy vùng nhớ không đồng đều.
 ## B3. Tối ưu Benchmark 2
+Vấn đề hiện tại nằm ở thao tác nhập/xuất chuẩn của iostream, số lần duyệt mảng và chi phí sao chép dữ liệu của đối tượng chuỗi mặc định.
 
----
+#### Các cải tiến
+
+- Thay `cin/cout` bằng buffered I/O sử dụng `fread` và `fwrite` với hai mảng đệm khổng lồ `in_buf` và `out_buf` (dung lượng khoảng 15MB) để tối ưu hóa tốc độ đọc/ghi đĩa.
+- Loại bỏ hoàn toàn `std::string`; phân tách các chuỗi đầu vào trực tiếp bằng cách đè ký tự kết thúc `\0` lên các dấu cách hoặc ký tự xuống dòng ngay trên mảng đệm `in_buf`.
+- Quản lý tập dữ liệu thông qua mảng con trỏ `char*` (`str_ptrs`), giúp thao tác hoán đổi và gom cụm chỉ tốn chi phí sao chép địa chỉ (8 bytes) thay vì toàn bộ nội dung chuỗi.
+- Chuyển thuật toán sang MSD Radix Sort dành cho chuỗi ký tự, đồng thời ngắt vòng đệ quy để chuyển qua Insertion Sort tối ưu hóa con trỏ khi quy mô mảng con giảm xuống từ 48 phần tử trở xuống.
+- Thiết lập mảng tần suất `count` kích thước 28 để gom cụm nhanh ký tự chữ cái tiếng Anh chữ thường và ký tự `\0`, định vị nhanh bằng biểu thức dịch mã ASCII `c ? c - 96 : 0`.
+- Đảo con trỏ bộ nhớ liên tục giữa mảng chính `str_ptrs` và mảng tạm `temp_ptrs` để tránh bước sao chép mảng dư thừa ở cuối mỗi pass đệ quy.
+- Sử dụng các cờ lệnh biên dịch cực mạnh `#pragma GCC optimize("O3,unroll-loops")` kết hợp yêu cầu tập lệnh phần cứng `#pragma GCC target("avx2,bmi,bmi2,lzcnt,popcnt")` để tăng tốc độ thực thi tối đa.
+- Tự xây dựng cơ chế chuyển đổi số nguyên nhanh (Fast Output) để biến đổi số lượng phần tử `n` thành chuỗi ký tự và nạp thẳng vào mảng đệm `out_buf`.
+
+Sau tối ưu, thời gian thực thi của chương trình giảm mạnh từ 250ms xuống còn khoảng 46ms.
+
 
 
 # C. Length-aware Lexicographic Sort
