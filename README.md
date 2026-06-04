@@ -141,7 +141,7 @@ Sắp xếp chuỗi dễ bị quá tải bởi chi phí so sánh từ điển ($
 Thuật toán cài đặt tốt nhất ở lần thứ hai: **Bucket Sort kết hợp Move Semantics và IntroSort (`std::sort`)**.
 
 **Phương thức tối ưu tiếp tục so với lần 1:**
-* **Move Semantics (C++11):** Ở lần 1, lệnh hoán vị (`swapStr`) tạo ra chi phí Deep Copy rất lớn ($O(L)$). Ở lần 2, ta dùng `buckets[s.length()].push_back(move(s))`. Lệnh `move` cướp quyền sở hữu vùng nhớ thay vì sao chép ký tự, đưa chi phí phân xô về đúng $O(1)$.
+* **Move Semantics (C++11):** Ở lần 1, lệnh hoán vị (`swapStr`) tạo ra chi phí Deep Copy rất lớn $O(L)$. Ở lần 2, ta dùng `buckets[s.length()].push_back(move(s))`. Lệnh `move` cướp quyền sở hữu vùng nhớ thay vì sao chép ký tự, đưa chi phí phân xô về đúng $O(1)$.
 * **Loại bỏ đệ quy sâu:** Thay vì tự cài đặt Quicksort đệ quy sâu dễ bị tràn Stack (Stack Overflow) với test mảng ngược ở C2, ta áp dụng trực tiếp `std::sort` lên từng xô tĩnh đã được chia rất nhỏ. 
 
 **Lý giải cải tiến:** Cải tiến này triệt tiêu hoàn toàn chi phí Memory Overhead. Hàm `std::sort` trong thư viện C++ thực chất là IntroSort, nó tự động lùi về Heap Sort nếu phát hiện Quicksort bị suy biến (do mảng ngược). Kết hợp với việc chia xô siêu nhỏ giúp dữ liệu nằm trọn trong L1 Cache, thuật toán mới đạt hiệu năng kịch trần và miễn nhiễm hoàn toàn với test case do C2 sinh ra.
