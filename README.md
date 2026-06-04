@@ -87,7 +87,7 @@ Dữ liệu chuỗi ($10 \le L \le 100$) mở ra lỗ hổng lớn về chi phí
 - **Bucket Sort nông (Nhóm 4):** Phân xô dựa trên 2 ký tự đầu, mất tác dụng nếu mọi chuỗi bắt đầu giống hệt nhau.
 
 **Chi tiết 5 test case làm chậm đối thủ:**
-1. **`test001.in` (Ngẫu nhiên kịch trần $L=100$):** Đánh sập RAM của thuật toán có cơ chế sao chép chuỗi (Nhóm 5, 10).
+1. **`test001.in` (Ngẫu nhiên tối đa $L=100$):** Đánh sập RAM của thuật toán có cơ chế sao chép chuỗi (Nhóm 5, 10).
 2. **`test002.in` (Tiền tố trùng lặp siêu dài - Tăng dần):** $10^5$ chuỗi chung 95 ký tự đầu, khác 5 ký tự cuối. Đẩy chi phí của `std::sort` lên $O(95 \times N \log N)$, gây TLE.
 3. **`test003.in` (Tiền tố trùng lặp - Giảm dần):** Đảo ngược test 002. Phá vỡ cài đặt Insertion Sort lai khi ép số lần dịch chuyển ký tự đạt cực đại.
 4. **`test004.in` (Đồng nhất tuyệt đối):** $10^5$ chuỗi chứa toàn ký tự `"z"`. Dồn tất cả dữ liệu vào 1 xô duy nhất, vô hiệu hóa hoàn toàn thuật toán chia bucket của Nhóm 4.
@@ -126,39 +126,15 @@ Thuật toán cài đặt tốt nhất ở lần chạy đầu tiên: **Bucket S
 ---
 
 ## C2. Sinh test case
-Dữ liệu chuỗi mở ra lỗ hổng lớn về chi phí so sánh từ điển và chi phí sao chép vùng nhớ Heap (Deep Copy). Đối với bài toán yêu cầu sắp xếp theo chiều dài trước rồi mới đến thứ tự từ điển, việc thiết kế các bộ test case cần nhắm vào điểm yếu cốt lõi của các thuật toán xử lý chuỗi.
+### B3. Sinh test case (Length-aware Lexicographic Sort - `strlenlexi`)
 
-**Các thuật toán mục tiêu:**
-* **So sánh mặc định (std::sort, strcmp):** Tốn O(L) cho mỗi lần so sánh nếu các chuỗi có tiền tố giống nhau. Rất dễ bị Time Limit Exceeded (TLE) trên các hệ thống chấm tự động.
-* **Quicksort phân hoạch kém (như Hoare cổ điển không tối ưu):** Dễ bị suy biến độ phức tạp khi gặp mảng có cấu trúc đặc biệt (như mảng đã sắp xếp ngược hoặc có cấu trúc chóp).
-* **Quản lý bộ nhớ lỏng lẻo:** Các thuật toán sao chép chuỗi thay vì dùng con trỏ/reference sẽ bị đánh sập RAM.
+Sắp xếp chuỗi dễ bị quá tải bởi chi phí so sánh từ điển ($O(L)$) và sao chép vùng nhớ. Bộ 5 test case (`N = 10000`) được thiết kế nhằm "triệt hạ" các thuật toán dùng `std::sort` thiếu tối ưu, Quicksort ngây thơ và rò rỉ RAM:
 
-**Chi tiết 5 test case làm chậm đối thủ (với `N = 10000`):**
-
-* **`test001.in` (Sắp xếp giảm dần với tiền tố chung siêu dài):**
-    * Toàn bộ mảng được sinh với tiền tố chung dài 96 ký tự `a`.
-    * Phần hậu tố gồm 4 ký tự được sinh giảm dần từ `N - 1` về `0` thông qua phép chuyển đổi cơ số 26. 
-    * Test này ép các thuật toán sắp xếp phải thực hiện hoán vị liên tục với chi phí so sánh chuỗi đạt mức tối đa.
-
-* **`test002.in` (Đan xen Min-Max):**
-    * Dùng hai con trỏ `left` và `right` để liên tục đan xen chuỗi nhỏ nhất và chuỗi lớn nhất từ hai đầu chụm vào giữa.
-    * Trình tự sinh ra nhảy liên tục giữa hai thái cực (min, max, min, max...). 
-    * Cấu trúc này phá vỡ các thuật toán sắp xếp lai (hybrid) có cơ chế dò tìm dãy con tăng/giảm sẵn có hoặc làm mất tác dụng của bộ tiên đoán nhánh (branch prediction) trên CPU.
-
-* **`test003.in` (Mảng xáo trộn với độ đồng nhất cực cao):**
-    * Khởi tạo mảng chỉ với 2 loại biến thể: một nửa mảng là chuỗi toàn 100 ký tự `a`, nửa còn lại là chuỗi 99 ký tự `a` kết thúc bằng `b`.
-    * Sử dụng `mt19937` để xáo trộn (shuffle) toàn bộ vị trí ngẫu nhiên. 
-    * Biến thể này vô hiệu hóa hoàn toàn thuật toán chia bucket, khiến mọi dữ liệu dồn cứng vào cùng một xô và ép thuật toán thoái hóa về các phương pháp sắp xếp kém hiệu quả hơn.
-
-* **`test004.in` (Phân bố hình ống / Đỉnh chóp - Pipe Organ):**
-    * Mảng ban đầu được sinh tăng dần (với tiền tố 96 ký tự `a`).
-    * Sau đó mảng được cấu trúc lại bằng cách đẩy các phần tử ở vị trí chẵn `i += 2` lên nửa đầu và các phần tử ở vị trí lẻ `i -= 2` về nửa sau. 
-    * Tạo ra một mảng tăng dần ở nửa đầu và giảm dần ở nửa sau, là "thiên địch" của Quick Sort ngây thơ vì bắt buộc đệ quy phải gọi rất sâu.
-
-* **`test005.in` (Biến thiên nhị phân liên tục):**
-    * Sử dụng trực tiếp biểu diễn nhị phân (chẵn/lẻ) của vòng lặp `val % 2` để quyết định ký tự `a` hoặc `b` ở từng vị trí cấu thành nên chuỗi dài 100 ký tự.
-    * Dữ liệu được xuất ra liên tục với cấu trúc bit thay đổi, gây nhiễu bộ đệm CPU khi con trỏ nhảy vùng nhớ không đồng đều.
----
+* **`test001.in` (Tiền tố dài, hậu tố giảm dần):** Tất cả chung 96 ký tự 'a', 4 ký tự cuối giảm dần. Ép chi phí so sánh và hoán vị chuỗi lên mức cực đại.
+* **`test002.in` (Đan xen Min-Max):** Trình tự sinh nhảy liên tục giữa chuỗi nhỏ nhất và lớn nhất. Phá vỡ các thuật toán lai (hybrid) và bộ tiên đoán nhánh (branch prediction) của CPU.
+* **`test003.in` (Đồng nhất 99%):** Xáo trộn ngẫu nhiên mảng chỉ gồm chuỗi toàn 'a' và chuỗi kết thúc bằng 'b'. Vô hiệu hóa Bucket/Radix Sort do toàn bộ dữ liệu bị dồn vào một xô duy nhất.
+* **`test004.in` (Đỉnh chóp - Pipe Organ):** Nửa đầu mảng tăng dần, nửa sau giảm dần. Đẩy Quicksort phân hoạch cổ điển vào trường hợp xấu nhất, dễ gây đệ quy sâu (TLE/MLE).
+* **`test005.in` (Biến thiên nhị phân):** Chuỗi được cấu thành từ ký tự 'a'/'b' dựa trên bit chẵn/lẻ. Gây trượt bộ đệm (cache miss) liên tục do CPU phải đọc vùng nhớ không đồng đều.
 
 ## C3. Tối ưu Benchmark 2
 
