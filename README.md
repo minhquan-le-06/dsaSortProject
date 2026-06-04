@@ -126,7 +126,38 @@ Thuật toán cài đặt tốt nhất ở lần chạy đầu tiên: **Bucket S
 ---
 
 ## C2. Sinh test case
+Dữ liệu chuỗi mở ra lỗ hổng lớn về chi phí so sánh từ điển và chi phí sao chép vùng nhớ Heap (Deep Copy). Đối với bài toán yêu cầu sắp xếp theo chiều dài trước rồi mới đến thứ tự từ điển, việc thiết kế các bộ test case cần nhắm vào điểm yếu cốt lõi của các thuật toán xử lý chuỗi.
 
+**Các thuật toán mục tiêu:**
+* **So sánh mặc định (std::sort, strcmp):** Tốn O(L) cho mỗi lần so sánh nếu các chuỗi có tiền tố giống nhau. Rất dễ bị Time Limit Exceeded (TLE) trên các hệ thống chấm tự động.
+* **Quicksort phân hoạch kém (như Hoare cổ điển không tối ưu):** Dễ bị suy biến độ phức tạp khi gặp mảng có cấu trúc đặc biệt (như mảng đã sắp xếp ngược hoặc có cấu trúc chóp).
+* **Quản lý bộ nhớ lỏng lẻo:** Các thuật toán sao chép chuỗi thay vì dùng con trỏ/reference sẽ bị đánh sập RAM.
+
+**Chi tiết 5 test case làm chậm đối thủ (với `N = 10000`):**
+
+* **`test001.in` (Sắp xếp giảm dần với tiền tố chung siêu dài):**
+    * Toàn bộ mảng được sinh với tiền tố chung dài 96 ký tự `a`.
+    * Phần hậu tố gồm 4 ký tự được sinh giảm dần từ `N - 1` về `0` thông qua phép chuyển đổi cơ số 26. 
+    * Test này ép các thuật toán sắp xếp phải thực hiện hoán vị liên tục với chi phí so sánh chuỗi đạt mức tối đa.
+
+* **`test002.in` (Đan xen Min-Max):**
+    * Dùng hai con trỏ `left` và `right` để liên tục đan xen chuỗi nhỏ nhất và chuỗi lớn nhất từ hai đầu chụm vào giữa.
+    * Trình tự sinh ra nhảy liên tục giữa hai thái cực (min, max, min, max...). 
+    * Cấu trúc này phá vỡ các thuật toán sắp xếp lai (hybrid) có cơ chế dò tìm dãy con tăng/giảm sẵn có hoặc làm mất tác dụng của bộ tiên đoán nhánh (branch prediction) trên CPU.
+
+* **`test003.in` (Mảng xáo trộn với độ đồng nhất cực cao):**
+    * Khởi tạo mảng chỉ với 2 loại biến thể: một nửa mảng là chuỗi toàn 100 ký tự `a`, nửa còn lại là chuỗi 99 ký tự `a` kết thúc bằng `b`.
+    * Sử dụng `mt19937` để xáo trộn (shuffle) toàn bộ vị trí ngẫu nhiên. 
+    * Biến thể này vô hiệu hóa hoàn toàn thuật toán chia bucket, khiến mọi dữ liệu dồn cứng vào cùng một xô và ép thuật toán thoái hóa về các phương pháp sắp xếp kém hiệu quả hơn.
+
+* **`test004.in` (Phân bố hình ống / Đỉnh chóp - Pipe Organ):**
+    * Mảng ban đầu được sinh tăng dần (với tiền tố 96 ký tự `a`).
+    * Sau đó mảng được cấu trúc lại bằng cách đẩy các phần tử ở vị trí chẵn `i += 2` lên nửa đầu và các phần tử ở vị trí lẻ `i -= 2` về nửa sau. 
+    * Tạo ra một mảng tăng dần ở nửa đầu và giảm dần ở nửa sau, là "thiên địch" của Quick Sort ngây thơ vì bắt buộc đệ quy phải gọi rất sâu.
+
+* **`test005.in` (Biến thiên nhị phân liên tục):**
+    * Sử dụng trực tiếp biểu diễn nhị phân (chẵn/lẻ) của vòng lặp `val % 2` để quyết định ký tự `a` hoặc `b` ở từng vị trí cấu thành nên chuỗi dài 100 ký tự.
+    * Dữ liệu được xuất ra liên tục với cấu trúc bit thay đổi, gây nhiễu bộ đệm CPU khi con trỏ nhảy vùng nhớ không đồng đều.
 ---
 
 ## C3. Tối ưu Benchmark 2
