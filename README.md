@@ -126,7 +126,6 @@ Thuật toán cài đặt tốt nhất ở lần chạy đầu tiên: **Bucket S
 ---
 
 ## C2. Sinh test case
-### B3. Sinh test case (Length-aware Lexicographic Sort - `strlenlexi`)
 
 Sắp xếp chuỗi dễ bị quá tải bởi chi phí so sánh từ điển ($O(L)$) và sao chép vùng nhớ. Bộ 5 test case (`N = 10000`) được thiết kế nhằm "triệt hạ" các thuật toán dùng `std::sort` thiếu tối ưu, Quicksort ngây thơ và rò rỉ RAM:
 
@@ -138,10 +137,9 @@ Sắp xếp chuỗi dễ bị quá tải bởi chi phí so sánh từ điển ($
 
 ## C3. Tối ưu Benchmark 2
 
-Thuật toán cài đặt tốt nhất ở lần thứ hai: **Bucket Sort kết hợp Move Semantics và IntroSort (`std::sort`)**.
+Thuật toán cài đặt tốt nhất ở lần thứ hai: Vẫn duy trì kiến trúc phân xô (Bucket Sort) từ Benchmark 1, nhưng thay thế hoàn toàn thuật toán sắp xếp nội bộ thành **LSD Radix Sort phi đệ quy (Iterative) kết hợp Sắp xếp gián tiếp (Indirect Sorting)**.
 
 **Phương thức tối ưu tiếp tục so với lần 1:**
-* **Move Semantics (C++11):** Ở lần 1, lệnh hoán vị (`swapStr`) tạo ra chi phí Deep Copy rất lớn $O(L)$. Ở lần 2, ta dùng `buckets[s.length()].push_back(move(s))`. Lệnh `move` cướp quyền sở hữu vùng nhớ thay vì sao chép ký tự, đưa chi phí phân xô về đúng $O(1)$.
-* **Loại bỏ đệ quy sâu:** Thay vì tự cài đặt Quicksort đệ quy sâu dễ bị tràn Stack (Stack Overflow) với test mảng ngược ở C2, ta áp dụng trực tiếp `std::sort` lên từng xô tĩnh đã được chia rất nhỏ. 
-
-**Lý giải cải tiến:** Cải tiến này triệt tiêu hoàn toàn chi phí Memory Overhead. Hàm `std::sort` trong thư viện C++ thực chất là IntroSort, nó tự động lùi về Heap Sort nếu phát hiện Quicksort bị suy biến (do mảng ngược). Kết hợp với việc chia xô siêu nhỏ giúp dữ liệu nằm trọn trong L1 Cache, thuật toán mới đạt hiệu năng kịch trần và miễn nhiễm hoàn toàn với test case do C2 sinh ra.
+* **Triệt tiêu hoàn toàn Đệ quy (100% Non-recursive):** Khi giới hạn $N$ tăng lên $10^5$, thuật toán 3-way Quicksort đệ quy ở Benchmark 1 bộc lộ lỗ hổng chí mạng: dễ dính lỗi Tràn bộ nhớ ngăn xếp (Stack Overflow - Runtime Error) khi gặp test case chứa chuỗi trùng lặp siêu dài. Việc chuyển sang LSD Radix Sort hoàn toàn dùng vòng lặp tuyến tính giúp thuật toán miễn nhiễm tuyệt đối với lỗi cạn kiệt Stack, đảm bảo chạy an toàn trên mọi cấu trúc dữ liệu.
+* **Tối ưu RAM bằng Sắp xếp gián tiếp (Indirect Indexing):** Thay vì sử dụng hoán vị trực tiếp (`swap` chuỗi) dễ làm nghẽn băng thông bộ nhớ khi xử lý các chuỗi dài kịch trần ($L=100$), nhóm khởi tạo một mảng phụ `vector<int> idx` để lưu vị trí các chuỗi. Radix Sort sẽ chỉ tính toán đếm phân phối và hoán đổi các số nguyên (chỉ số) này với chi phí $O(1)$. Dữ liệu chuỗi gốc `std::string` hoàn toàn nằm im, giúp triệt tiêu triệt để chi phí Deep Copy.
+* **Đồng bộ hóa hoàn hảo với Bucket Sort:** Nhờ việc chia xô tĩnh theo độ dài từ trước, dữ liệu đi vào hàm LSD Radix Sort luôn đồng nhất về chiều dài. Thuật toán chỉ việc dùng Counting Sort quét ổn định từ ký tự cuối cùng lùi về ký tự đầu tiên, đưa tổng độ phức tạp thuật toán về mức tuyến tính tuyệt đối $O(L \times N)$ mà không cần bất kỳ thao tác so sánh nào.
